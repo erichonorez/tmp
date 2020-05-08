@@ -1,8 +1,6 @@
 package org.example.tstra.application.usecase;
 
-import org.example.tstra.domain.Merchant;
-import org.example.tstra.domain.PositiveAmount;
-import org.example.tstra.domain.Product;
+import org.example.tstra.domain.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,6 +13,7 @@ import static org.example.tstra.domain.builders.MerchantBuilder.aMerchant;
 import static org.example.tstra.domain.builders.ProductBuilder.aProduct;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class CreateLoanApplicationUnitTest {
@@ -28,11 +27,14 @@ class CreateLoanApplicationUnitTest {
     @Mock
     private CreateLoanApplication.ProductService productService;
 
+    @Mock
+    private CreateLoanApplication.LoanApplicationRepository loanApplicationRepository;
+
     @InjectMocks
     private CreateLoanApplication useCase;
 
     @Test
-    public void happyFlow() throws CreateLoanApplication.CreateLoanApplicationException, PositiveAmount.InvalidPositiveAmount {
+    public void happyFlow() throws CreateLoanApplication.CreateLoanApplicationException, PositiveAmount.InvalidPositiveAmount, Language.InvalidLanguageException {
         // given
         PositiveAmount minLoanAmount = PositiveAmount.of(1);
         PositiveAmount maxLoanAmount = PositiveAmount.of(50000);
@@ -70,6 +72,14 @@ class CreateLoanApplicationUnitTest {
 
         // then
         assertEquals(loanApplicationId, result.getLoanApplicationId());
+
+        verify(this.loanApplicationRepository).persist(new LoanApplication(
+            loanApplicationId,
+            merchantId,
+            productId,
+            Language.of(language),
+            PositiveAmount.of(purchaseAmount)
+        ));
     }
 
     @Test
