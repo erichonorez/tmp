@@ -15,7 +15,7 @@ public enum Language {
 
     static final Map<String, Language> validLanguages = EnumSet.allOf(Language.class)
         .stream()
-        .map(e -> new Pair<>(e.value, e))
+        .map(e -> new Pair<>(e.getValue(), e))
         .collect(Collectors.toMap(tuple -> tuple.getKey(), tuple -> tuple.getValue()));
 
     private final String value;

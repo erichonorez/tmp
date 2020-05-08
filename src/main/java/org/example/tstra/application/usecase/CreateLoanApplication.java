@@ -2,14 +2,18 @@ package org.example.tstra.application.usecase;
 
 import lombok.NonNull;
 import lombok.Value;
+import org.example.tstra.application.service.PurchaseAmountInRangePolicy;
 import org.example.tstra.domain.Language;
+import org.example.tstra.domain.Merchant;
 import org.example.tstra.domain.PositiveAmount;
+import org.example.tstra.domain.Product;
 
 public final class CreateLoanApplication {
 
     private final LoanApplicationIdGenerator loanApplicationIdGenerator;
     private final MerchantService merchantService;
     private final ProductService productService;
+    private final PurchaseAmountInRangePolicy purchaseAmountInRangePolicy;
 
     public CreateLoanApplication(
         @NonNull LoanApplicationIdGenerator loanApplicationIdGenerator,
@@ -18,17 +22,27 @@ public final class CreateLoanApplication {
         this.loanApplicationIdGenerator = loanApplicationIdGenerator;
         this.merchantService = merchantService;
         this.productService = productService;
+        this.purchaseAmountInRangePolicy = new PurchaseAmountInRangePolicy();
     }
 
     public CreateLoanApplicationResponse execute(@NonNull CreateLoanApplicationRequest request) throws CreateLoanApplicationException {
-        String merchantId = this.merchantService.findMerchantId(request.merchantId);
-        this.productService.findProductId(merchantId, request.productId);
-        this.validateLanguage(request.language);
-        this.validatePurchaseAmount(request.purchaseAmount);
+        Merchant merchant = this.merchantService.findMerchantId(request.getMerchantId());
+        Product product = this.productService.findProductId(merchant.getMerchantId(), request.getProductId());
+        PositiveAmount purchaseAmount = this.validatePurchaseAmount(request.getPurchaseAmount());
+        this.validatePurchaseAmountIsInRange(purchaseAmount, merchant, product);
+        this.validateLanguage(request.getLanguage());
 
         return new CreateLoanApplicationResponse(
             loanApplicationIdGenerator.generateId()
         );
+    }
+
+    private PositiveAmount validatePurchaseAmountIsInRange(PositiveAmount purchaseAmount, Merchant merchant, Product product) throws PurchaseAmountOutOfRange {
+        try {
+            return this.purchaseAmountInRangePolicy.validate(purchaseAmount, merchant, product);
+        } catch (PurchaseAmountInRangePolicy.InvalidPurchaseAmount invalidPurchaseAmount) {
+            throw new PurchaseAmountOutOfRange();
+        }
     }
 
     private Language validateLanguage(String language) throws InvalidLanguageException {
@@ -53,11 +67,13 @@ public final class CreateLoanApplication {
     }
 
     public interface MerchantService {
-        String findMerchantId(@NonNull String merchantId) throws MerchantNotFoundException;
+        Merchant findMerchantId(@NonNull String merchantId) throws MerchantNotFoundException;
+
     }
 
     public interface ProductService {
-        String findProductId(@NonNull String merchantId, @NonNull String productId) throws ProductNotFoundException;
+        Product findProductId(@NonNull String merchantId, @NonNull String productId) throws ProductNotFoundException;
+
     }
 
     @Value
