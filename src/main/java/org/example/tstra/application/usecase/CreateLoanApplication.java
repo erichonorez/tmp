@@ -5,6 +5,8 @@ import lombok.Value;
 import org.example.tstra.application.service.PurchaseAmountInRangePolicy;
 import org.example.tstra.domain.*;
 
+import javax.inject.Named;
+
 public final class CreateLoanApplication {
 
     private final LoanApplicationIdGenerator loanApplicationIdGenerator;
@@ -13,6 +15,7 @@ public final class CreateLoanApplication {
     private final LoanApplicationRepository loanApplicationRepository;
     private final PurchaseAmountInRangePolicy purchaseAmountInRangePolicy;
 
+    @Named
     public CreateLoanApplication(
         @NonNull LoanApplicationIdGenerator loanApplicationIdGenerator,
         @NonNull MerchantService merchantService,
