@@ -4,14 +4,32 @@ import org.example.tstra.domain.Merchant;
 import org.example.tstra.domain.PositiveAmount;
 import org.example.tstra.domain.Product;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
 
 import static org.example.tstra.domain.builders.MerchantBuilder.aMerchant;
 import static org.example.tstra.domain.builders.ProductBuilder.aProduct;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.BDDMockito.given;
 
+@ExtendWith(MockitoExtension.class)
 class CreateLoanApplicationUnitTest {
+
+    @Mock
+    private CreateLoanApplication.LoanApplicationIdGenerator loanApplicationIdGenerator;
+
+    @Mock
+    private CreateLoanApplication.MerchantService merchantService;
+
+    @Mock
+    private CreateLoanApplication.ProductService productService;
+
+    @InjectMocks
+    private CreateLoanApplication useCase;
 
     @Test
     public void happyFlow() throws CreateLoanApplication.CreateLoanApplicationException, PositiveAmount.InvalidPositiveAmount {
@@ -36,13 +54,11 @@ class CreateLoanApplicationUnitTest {
 
         final String loanApplicationId = UUID.randomUUID().toString();
 
-        // when
-        CreateLoanApplication useCase = new CreateLoanApplication(
-            () -> loanApplicationId,
-            existingMerchantId -> merchant,
-            (existingMerchantId, existingProductId) -> product
-        );
+        given(this.loanApplicationIdGenerator.generateId()).willReturn(loanApplicationId);
+        given(this.merchantService.findMerchantId(merchantId)).willReturn(merchant);
+        given(this.productService.findProductId(merchantId, productId)).willReturn(product);
 
+        // when
         CreateLoanApplication.CreateLoanApplicationResponse result = useCase.execute(
             new CreateLoanApplication.CreateLoanApplicationRequest(
                 merchantId,
@@ -57,7 +73,7 @@ class CreateLoanApplicationUnitTest {
     }
 
     @Test
-    public void whenThenMerchantDoesNotExist_itShouldThrowAnException() {
+    public void whenThenMerchantDoesNotExist_itShouldThrowAnException() throws CreateLoanApplication.MerchantNotFoundException, CreateLoanApplication.ProductNotFoundException {
         // given
         final String merchantId = UUID.randomUUID().toString();
         final String productId = UUID.randomUUID().toString();
@@ -65,17 +81,9 @@ class CreateLoanApplicationUnitTest {
         final String language = "fr";
         final int purchaseAmount = 40000; // in cents
 
-        final String loanApplicationId = UUID.randomUUID().toString();
+        given(this.merchantService.findMerchantId(merchantId)).willThrow(CreateLoanApplication.MerchantNotFoundException.class);
 
-        // when
-        CreateLoanApplication useCase = new CreateLoanApplication(
-            () -> loanApplicationId,
-            nonExistingMerchantId -> {
-                throw new CreateLoanApplication.MerchantNotFoundException();
-            },
-            (nonExistingMerchant, existingProductId) -> product
-        );
-
+        // when // then
         assertThrows(CreateLoanApplication.MerchantNotFoundException.class, () -> {
             useCase.execute(
                 new CreateLoanApplication.CreateLoanApplicationRequest(
@@ -89,7 +97,7 @@ class CreateLoanApplicationUnitTest {
     }
 
     @Test
-    public void whenTheProductDoesNotExist_itShouldThrowAnException() {
+    public void whenTheProductDoesNotExist_itShouldThrowAnException() throws CreateLoanApplication.MerchantNotFoundException, CreateLoanApplication.ProductNotFoundException {
         // given
         final String merchantId = UUID.randomUUID().toString();
         final Merchant merchant = aMerchant().withMerchantId(merchantId);
@@ -98,17 +106,10 @@ class CreateLoanApplicationUnitTest {
         final String language = "fr";
         final int purchaseAmount = 40000; // in cents
 
-        final String loanApplicationId = UUID.randomUUID().toString();
+        given(this.merchantService.findMerchantId(merchantId)).willReturn(merchant);
+        given(this.productService.findProductId(merchantId, productId)).willThrow(CreateLoanApplication.ProductNotFoundException.class);
 
-        // when
-        CreateLoanApplication useCase = new CreateLoanApplication(
-            () -> loanApplicationId,
-            existingMerchantId -> merchant,
-            (existingMerchantId, nonExistingProductId) -> {
-                throw new CreateLoanApplication.ProductNotFoundException();
-            }
-        );
-
+        // when then
         assertThrows(CreateLoanApplication.ProductNotFoundException.class, () -> {
             useCase.execute(
                 new CreateLoanApplication.CreateLoanApplicationRequest(
@@ -122,7 +123,7 @@ class CreateLoanApplicationUnitTest {
     }
 
     @Test
-    public void whenTheLanguageIsInvalid_itShouldThrowAnException() {
+    public void whenTheLanguageIsInvalid_itShouldThrowAnException() throws CreateLoanApplication.MerchantNotFoundException, CreateLoanApplication.ProductNotFoundException {
         // given
         final String merchantId = UUID.randomUUID().toString();
         final Merchant merchant = aMerchant().withMerchantId(merchantId);
@@ -131,15 +132,10 @@ class CreateLoanApplicationUnitTest {
         final String language = "en";
         final int purchaseAmount = 40000; // in cents
 
-        final String loanApplicationId = UUID.randomUUID().toString();
+        given(this.merchantService.findMerchantId(merchantId)).willReturn(merchant);
+        given(this.productService.findProductId(merchantId, productId)).willReturn(product);
 
-        // when
-        CreateLoanApplication useCase = new CreateLoanApplication(
-            () -> loanApplicationId,
-            existingMerchantId -> merchant,
-            (existingMerchantId, existingProductId) -> product
-        );
-
+        // when // then
         assertThrows(CreateLoanApplication.InvalidLanguageException.class, () -> {
             useCase.execute(
                 new CreateLoanApplication.CreateLoanApplicationRequest(
@@ -153,7 +149,7 @@ class CreateLoanApplicationUnitTest {
     }
 
     @Test
-    public void whenThePurchaseAmountIsInvalid_itShouldThrowAnException() {
+    public void whenThePurchaseAmountIsInvalid_itShouldThrowAnException() throws CreateLoanApplication.MerchantNotFoundException, CreateLoanApplication.ProductNotFoundException {
         // given
         final String merchantId = UUID.randomUUID().toString();
         final Merchant merchant = aMerchant().withMerchantId(merchantId);
@@ -162,15 +158,10 @@ class CreateLoanApplicationUnitTest {
         final String language = "fr";
         final int purchaseAmount = -40000; // in cents
 
-        final String loanApplicationId = UUID.randomUUID().toString();
+        given(this.merchantService.findMerchantId(merchantId)).willReturn(merchant);
+        given(this.productService.findProductId(merchantId, productId)).willReturn(product);
 
-        // when
-        CreateLoanApplication useCase = new CreateLoanApplication(
-            () -> loanApplicationId,
-            existingMerchantId -> merchant,
-            (existingMerchantId, existingProductId) -> product
-        );
-
+        // when then
         assertThrows(CreateLoanApplication.InvalidPurchaseAmountException.class, () -> {
             useCase.execute(
                 new CreateLoanApplication.CreateLoanApplicationRequest(
@@ -184,7 +175,7 @@ class CreateLoanApplicationUnitTest {
     }
 
     @Test
-    public void whenThePurchaseAmountIsContainedInTheMerchantRange_itShouldThrowAnException() throws PositiveAmount.InvalidPositiveAmount {
+    public void whenThePurchaseAmountIsContainedInTheMerchantRange_itShouldThrowAnException() throws PositiveAmount.InvalidPositiveAmount, CreateLoanApplication.MerchantNotFoundException, CreateLoanApplication.ProductNotFoundException {
         // given
         PositiveAmount maxLoanAmount = PositiveAmount.of(30000);
 
@@ -201,15 +192,10 @@ class CreateLoanApplicationUnitTest {
         final String language = "fr";
         final int purchaseAmount = 40000; // in cents
 
-        final String loanApplicationId = UUID.randomUUID().toString();
+        given(this.merchantService.findMerchantId(merchantId)).willReturn(merchant);
+        given(this.productService.findProductId(merchantId, productId)).willReturn(product);
 
-        // when
-        CreateLoanApplication useCase = new CreateLoanApplication(
-            () -> loanApplicationId,
-            existingMerchantId -> merchant,
-            (existingMerchantId, existingProductId) -> product
-        );
-
+        // when then
         assertThrows(CreateLoanApplication.PurchaseAmountOutOfRange.class, () -> {
             useCase.execute(
                 new CreateLoanApplication.CreateLoanApplicationRequest(
