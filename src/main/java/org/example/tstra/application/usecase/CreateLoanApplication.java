@@ -7,7 +7,7 @@ import org.example.tstra.domain.*;
 
 import javax.inject.Named;
 
-public final class CreateLoanApplication {
+public class CreateLoanApplication {
 
     private final LoanApplicationIdGenerator loanApplicationIdGenerator;
     private final MerchantService merchantService;
