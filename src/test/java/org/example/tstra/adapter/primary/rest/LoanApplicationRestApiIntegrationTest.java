@@ -131,8 +131,6 @@ public class LoanApplicationRestApiIntegrationTest {
                     .andExpect(content().json("{\"type\": \"MethodArgumentNotValidException\"}"));
             });
         });
-
-
     }
 
 }
